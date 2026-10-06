@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Claims Tracker</title>
+<style>
+:root{--blue:#0f6cbd;--blue-h:#2886de;--ink:#323130;--mute:#605e5c;--line:#e1dfdd;--soft:#f5f5f5;--pending:#d73a3c;--prog:#287086;--done:#34982f}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.4 "Segoe UI",system-ui,-apple-system,sans-serif;color:var(--ink);background:#fff}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{border:1px solid var(--line);background:var(--soft);padding:8px 10px;min-height:38px;width:100%;border-radius:2px}
+input:hover,select:hover,textarea:hover{border-color:var(--blue)}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+input[readonly]{background:#eee;color:var(--mute)}
+textarea{min-height:76px;resize:vertical}
+button{cursor:pointer;border:1px solid var(--blue);background:var(--blue);color:#fff;padding:8px 16px;border-radius:4px;min-height:38px}
+button:hover{background:var(--blue-h)}
+button.ghost{background:#fff;color:var(--blue)}
+button.ghost:hover{background:#eff6fc}
+button.danger{border-color:var(--pending);color:var(--pending);background:#fff}
+button:disabled{opacity:.5;cursor:not-allowed}
+.bar{display:flex;align-items:center;gap:12px;padding:10px 16px}
+.grow{flex:1}
+.logo{height:56px;width:56px;object-fit:contain}
+.top{border-bottom:1px solid var(--line)}
+.top select{width:160px}.top input.search{width:280px}
+.stats{display:flex;gap:18px;margin-left:12px}
+.stat{background:none;border:0;color:inherit;padding:4px 6px;min-height:0;font-weight:600;border-radius:4px}
+.stat:hover{background:var(--soft)}
+.stat b{margin-left:6px;background:var(--soft);padding:2px 8px;border-radius:10px;color:var(--ink)}
+.stat.on{outline:2px solid currentColor}
+.s-Pending{color:var(--pending)}.s-inprogress{color:var(--prog)}.s-Completed{color:var(--done)}
+.cols{display:grid;grid-template-columns:2.2fr 1.3fr 1fr 1fr 1fr 1fr 44px;gap:8px;align-items:center}
+.head{background:var(--blue);color:#fff;font-weight:600;padding:14px 16px;margin:12px 16px 0}
+.head button{background:none;border:0;padding:0;min-height:0;justify-self:end;font-size:26px;line-height:1;color:#fff}
+.row{padding:0 16px;min-height:60px;border-bottom:1px solid var(--line);cursor:pointer;margin:0 16px}
+.row:hover,.row:focus-visible{background:#eff6fc}
+.row>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .go{color:var(--blue);text-align:right;font-size:18px}
+.empty{padding:48px;text-align:center;color:var(--mute)}
+.formbar{background:#d6dde0;position:sticky;top:0;z-index:5}
+.formbar h1{font-size:16px;margin:0;font-weight:600}
+.back{background:none;border:0;color:var(--blue);font-size:22px;padding:0 8px;min-height:0}
+.back:hover{background:none;color:var(--blue-h)}
+.wrap{display:flex;gap:16px;padding:16px 16px 96px;align-items:flex-start}
+.form{flex:1.4;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px 18px}
+.field label{display:block;font-weight:600;margin-bottom:4px}
+.field label i{color:var(--pending);font-style:normal}
+.field.wide{grid-column:1/-1}
+.err{color:var(--pending);font-size:12px;margin-top:2px}
+.panel{flex:.4;min-width:270px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:8px;position:sticky;top:72px}
+.panel h2{font-size:15px;margin:8px 8px 4px}
+.inv{display:flex;align-items:center;gap:8px;padding:10px 8px;border-bottom:1px solid var(--line)}
+.inv span:first-child{width:84px;font-weight:600}
+.inv button{background:none;border:0;color:var(--mute);min-height:0;padding:4px 8px;font-size:16px}
+.inv button:hover{background:none;color:var(--pending)}
+.total{display:flex;justify-content:space-between;padding:12px 8px;font-weight:700}
+.invbar{position:fixed;left:0;right:0;bottom:0;background:#fff;box-shadow:0 -3px 12px rgba(0,0,0,.15);z-index:6}
+.invbar select{width:150px}.invbar input{width:180px}
+.files{list-style:none;margin:6px 0 0;padding:0}
+.files li{display:flex;gap:10px;align-items:center;padding:4px 0}
+.files a{color:var(--blue)}
+.files button{background:none;border:0;color:var(--pending);min-height:0;padding:0 6px}
+.files button:hover{background:none}
+.toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:4px;z-index:20}
+.toast.err{background:var(--pending)}
+details.data{position:relative}
+details.data summary{cursor:pointer;list-style:none;padding:8px 10px;border:1px solid var(--line);border-radius:4px}
+details.data div{position:absolute;right:0;top:44px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.2);padding:6px;display:grid;gap:4px;width:190px;z-index:9}
+details.data button{background:#fff;color:var(--ink);border:0;text-align:left}
+details.data button:hover{background:var(--soft)}
+@media(max-width:900px){.wrap{flex-direction:column}.panel{position:static;width:100%}.cols{grid-template-columns:2fr 1fr 1fr 30px}.cols>:nth-child(n+4):nth-child(-n+6){display:none}.top input.search{width:100%}.bar{flex-wrap:wrap}}
+@media(prefers-reduced-motion:no-preference){.toast{animation:in .2s}@keyframes in{from{opacity:0}}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast" hidden></div>
+<script>
+const LOGO="data:image/jpeg;base64,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";
+const LS="claimsTracker.v1", USER="claimsTracker.user";
+const MAXINV=18;
+
+/* ---- field definitions, in the same order as the Power Apps form ---- */
+const F=[
+ {k:"title",l:"Claim Name",t:"text",req:1},
+ {k:"incident",l:"Incident Number",t:"text"},
+ {k:"site",l:"Site",t:"choice"},
+ {k:"division",l:"Division",t:"choice",def:["SC"]},
+ {k:"costCode",l:"Cost Code",t:"choice"},
+ {k:"severity",l:"Severity",t:"text"},
+ {k:"notificationDate",l:"Notification Date",t:"dt"},
+ {k:"claimOpenedDate",l:"Claim Opened Date",t:"dt"},
+ {k:"status",l:"Status",t:"choice",def:["Pending","In progress","Completed"]},
+ {k:"comments",l:"Comments / Status",t:"area",wide:1},
+ {k:"accrualRemaining",l:"Accrual Remaining",t:"num"},
+ {k:"claimClosedDate",l:"Claim Closed Date",t:"dt"},
+ {k:"claimCode",l:"Claim Code",t:"choice"},
+ {k:"consultants",l:"Consultant and clinician names, subcontractors e.g. Hexarad",t:"text",wide:1},
+ {k:"death",l:"Death",t:"choice",def:["Yes","No"]},
+ {k:"entity",l:"Entity",t:"choice"},
+ {k:"estimatedDate",l:"Estimated date",t:"dt"},
+ {k:"excess",l:"Excess",t:"num"},
+ {k:"excessEroded",l:"Excess Eroded",t:"num"},
+ {k:"excessRemaining",l:"Excess remaining",t:"num"},
+ {k:"incidentDate",l:"Incident Date",t:"dt"},
+ {k:"indemnityType",l:"Indemnity Type",t:"choice"},
+ {k:"learning",l:"Learning",t:"area",wide:1},
+ {k:"openClaim",l:"Open Claim",t:"choice",def:["Yes","No"]},
+ {k:"panelSolicitor",l:"Panel Solicitor",t:"choice"},
+ {k:"ppgCappedReserve",l:"PPG Capped Reserve",t:"num"},
+ {k:"reopenedDate",l:"Re-Opened date",t:"dt"},
+ {k:"reserves",l:"Reserves",t:"num"},
+ {k:"referenceNumber",l:"Reference number",t:"text"},
+ {k:"settlementPaid",l:"Settlement Paid",t:"num"},
+ {k:"totalAmount",l:"Total Amount (sum of invoices)",t:"ro"},
+ {k:"attachments",l:"Attachments",t:"files",wide:1}
+];
+
+/* ---- storage ---- */
+let db;
+try{db=JSON.parse(localStorage.getItem(LS))}catch(e){}
+if(!db){
+  const d=(o)=>new Date(Date.now()-o*864e5).toISOString().slice(0,16);
+  db={next:4,claims:[
+    {id:1,title:"Sample claim – slip in corridor",status:"Pending",site:"Bengaluru",division:"SC",notificationDate:d(12),invoices:{1:1250.5,2:800},totalAmount:2050.5,createdBy:"Sample"},
+    {id:2,title:"Sample claim – delayed diagnosis",status:"In progress",site:"Mysuru",division:"SC",notificationDate:d(40),invoices:{1:5400},totalAmount:5400,createdBy:"Sample"},
+    {id:3,title:"Sample claim – equipment damage",status:"Completed",site:"Bengaluru",division:"SC",notificationDate:d(90),invoices:{},totalAmount:0,createdBy:"Sample"}]};
+  persist();
+}
+function persist(){
+  try{localStorage.setItem(LS,JSON.stringify(db));return true}
+  catch(e){toast("Browser storage is full. Remove attachments or export your data.",1);return false}
+}
+function userName(){
+  let u=localStorage.getItem(USER);
+  if(!u){u=(prompt("Your name (shown as “Created By” on new claims):")||"").trim()||"User";localStorage.setItem(USER,u)}
+  return u;
+}
+
+/* ---- helpers ---- */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const eur=n=>"€"+new Intl.NumberFormat("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
+const same=(a,b)=>String(a||"").toLowerCase()===String(b||"").toLowerCase();
+const fdate=v=>v?new Date(v).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}):"";
+const total=inv=>Object.values(inv).reduce((a,b)=>a+(+b||0),0);
+let tt;function toast(m,bad){const t=$("#toast");t.textContent=m;t.className="toast"+(bad?" err":"");t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2600)}
+function choices(f){const s=new Set(f.def||[]);db.claims.forEach(c=>c[f.k]&&s.add(c[f.k]));return[...s].sort()}
+function download(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
+
+/* ---- router ---- */
+const ui={q:"",st:"All"};
+function route(){
+  const h=location.hash;
+  if(h==="#/new")return form(null);
+  const m=h.match(/^#\/claim\/(\d+)$/);
+  if(m){const c=db.claims.find(c=>c.id==m[1]);if(c)return form(c)}
+  list();
+}
+addEventListener("hashchange",route);
+
+/* ---- list screen ---- */
+function list(){
+  const n=s=>db.claims.filter(c=>same(c.status,s)).length;
+  $("#app").innerHTML=`
+  <div class="top bar">
+    <select id="st" aria-label="Filter by status">${["All","Pending","Completed","In Progress"].map(o=>`<option ${same(o,ui.st)?"selected":""}>${o}</option>`).join("")}</select>
+    <input id="q" class="search" type="search" placeholder="Search claim name" value="${esc(ui.q)}" aria-label="Search claims">
+    <div class="stats">
+      <button class="stat s-Pending" data-s="Pending">Pending<b>${n("Pending")}</b></button>
+      <button class="stat s-inprogress" data-s="In Progress">In Progress<b>${n("In progress")}</b></button>
+      <button class="stat s-Completed" data-s="Completed">Completed<b>${n("Completed")}</b></button>
+    </div>
+    <span class="grow"></span>
+    <details class="data"><summary>Data</summary><div>
+      <button id="exj">Export JSON</button><button id="exc">Export CSV</button>
+      <button id="imp">Import JSON</button><button id="clr">Delete all claims</button></div></details>
+    <img class="logo" src="${LOGO}" alt="Narayana Health">
+  </div>
+  <div class="head cols">
+    <span>Claim Name</span><span>Notification Date</span><span>Status</span><span>Site</span><span>Division</span><span>Created By</span>
+    <button id="add" title="Add claim" aria-label="Add claim">+</button>
+  </div>
+  <div id="rows"></div>
+  <input type="file" id="file" accept="application/json" hidden>`;
+  $("#st").onchange=e=>{ui.st=e.target.value;rows()};
+  $("#q").oninput=e=>{ui.q=e.target.value;rows()};
+  document.querySelectorAll(".stat").forEach(b=>b.onclick=()=>{ui.st=b.dataset.s;$("#st").value=ui.st;rows()});
+  $("#add").onclick=()=>location.hash="#/new";
+  $("#exj").onclick=()=>download("claims.json",JSON.stringify(db,null,2),"application/json");
+  $("#exc").onclick=exportCsv;
+  $("#imp").onclick=()=>$("#file").click();
+  $("#file").onchange=importJson;
+  $("#clr").onclick=()=>{if(confirm("Delete ALL claims from this browser? Export first if unsure.")){db.claims=[];persist();list()}};
+  rows();
+}
+function rows(){
+  const q=ui.q.trim().toLowerCase();
+  const r=db.claims.filter(c=>(ui.st==="All"||same(c.status,ui.st))&&(c.title||"").toLowerCase().includes(q)).sort((a,b)=>b.id-a.id);
+  document.querySelectorAll(".stat").forEach(b=>b.classList.toggle("on",same(b.dataset.s,ui.st)));
+  $("#rows").innerHTML=r.length?r.map(c=>`
+   <div class="row cols" tabindex="0" role="link" data-id="${c.id}">
+    <span>${esc(c.title)}</span><span>${fdate(c.notificationDate)}</span><span>${esc(c.status)}</span>
+    <span>${esc(c.site)}</span><span>${esc(c.division)}</span><span>${esc(c.createdBy)}</span><span class="go">➜</span></div>`).join("")
+   :`<div class="empty">No claims match. Change the filter or select + to add one.</div>`;
+  document.querySelectorAll(".row").forEach(e=>{
+    const go=()=>location.hash="#/claim/"+e.dataset.id;
+    e.onclick=go;e.onkeydown=k=>{if(k.key==="Enter")go()};
+  });
+}
+function exportCsv(){
+  const cols=[["id","ID"],...F.filter(f=>f.t!=="files").map(f=>[f.k,f.l]),["createdBy","Created By"]];
+  const inv=Array.from({length:MAXINV},(_,i)=>i+1);
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const head=[...cols.map(c=>c[1]),...inv.map(i=>"Invoice "+i)];
+  const body=db.claims.map(c=>[...cols.map(([k])=>c[k]),...inv.map(i=>c.invoices?.[i]??"")].map(q).join(","));
+  download("claims.csv","\ufeff"+[head.map(q).join(","),...body].join("\r\n"),"text/csv");
+}
+function importJson(e){
+  const f=e.target.files[0];if(!f)return;
+  f.text().then(t=>{
+    const d=JSON.parse(t);
+    if(!Array.isArray(d.claims))throw 0;
+    if(!confirm(`Replace current data with ${d.claims.length} imported claim(s)?`))return;
+    db={next:Math.max(d.next||1,...d.claims.map(c=>c.id+1),1),claims:d.claims};
+    persist();list();toast("Imported");
+  }).catch(()=>toast("That file isn't a valid claims export.",1));
+}
+
+/* ---- claim form screen ---- */
+function form(claim){
+  const isNew=!claim;
+  const cur=isNew?{}:JSON.parse(JSON.stringify(claim));
+  const inv={...(cur.invoices||{})};
+  let files=[...(cur.attachments||[])];
+  let panel=false;
+  const free=()=>{for(let i=1;i<=MAXINV;i++)if(!(i in inv))return i;return 0};
+
+  const input=f=>{
+    const v=cur[f.k]??"",id="f_"+f.k;
+    if(f.t==="area")return`<textarea id="${id}">${esc(v)}</textarea>`;
+    if(f.t==="num")return`<input id="${id}" type="number" step="any" value="${esc(v)}">`;
+    if(f.t==="dt")return`<input id="${id}" type="datetime-local" value="${esc(v)}">`;
+    if(f.t==="ro")return`<input id="${id}" readonly value="${eur(total(inv))}">`;
+    if(f.t==="choice")return`<input id="${id}" list="dl_${f.k}" value="${esc(v)}" autocomplete="off"><datalist id="dl_${f.k}">${choices(f).map(o=>`<option value="${esc(o)}">`).join("")}</datalist>`;
+    if(f.t==="files")return`<input id="${id}" type="file" multiple><ul class="files" id="flist"></ul>`;
+    return`<input id="${id}" value="${esc(v)}">`;
+  };
+  $("#app").innerHTML=`
+  <div class="formbar bar">
+    <button class="back" id="back" aria-label="Back to list">←</button>
+    <h1>${isNew?"New claim":"Edit claim"}</h1><span class="grow"></span>
+    ${isNew?"":`<button class="danger" id="del">Delete</button>`}
+    <button id="save">Submit</button>
+  </div>
+  <div class="wrap">
+    <form class="form" id="frm" novalidate>${F.map(f=>`
+      <div class="field ${f.wide?"wide":""}"><label for="f_${f.k}">${esc(f.l)}${f.req?" <i>*</i>":""}</label>${input(f)}<div class="err" id="e_${f.k}"></div></div>`).join("")}
+    </form>
+    <aside class="panel" id="panel" hidden><h2>Invoices</h2><div id="invs"></div></aside>
+  </div>
+  <div class="invbar bar">
+    <select id="slot" aria-label="Next invoice slot"></select>
+    <input id="amt" type="number" min="0" step="0.01" placeholder="Amount (€)" aria-label="Invoice amount">
+    <button id="addinv" class="ghost" title="Add invoice" aria-label="Add invoice">+ Add</button>
+    <span class="grow"></span>
+    <button id="tog" class="ghost">View Invoices</button>
+  </div>`;
+
+  const paintInv=()=>{
+    const ks=Object.keys(inv).map(Number).sort((a,b)=>a-b);
+    $("#invs").innerHTML=(ks.length?ks.map(k=>`<div class="inv"><span>Invoice ${k}</span><span class="grow">${eur(inv[k])}</span><button data-k="${k}" aria-label="Remove invoice ${k}">✕</button></div>`).join(""):`<div class="empty">No invoices yet.</div>`)
+      +`<div class="total"><span>Total</span><span>${eur(total(inv))}</span></div>`;
+    document.querySelectorAll("#invs button").forEach(b=>b.onclick=()=>{delete inv[b.dataset.k];paintInv()});
+    const n=free();
+    $("#slot").innerHTML=n?`<option>Invoice ${n}</option>`:`<option>All 18 used</option>`;
+    $("#slot").disabled=$("#amt").disabled=$("#addinv").disabled=!n;
+    $("#f_totalAmount").value=eur(total(inv));
+  };
+  const paintFiles=()=>{
+    $("#flist").innerHTML=files.map((f,i)=>`<li><a href="${f.data}" download="${esc(f.name)}">${esc(f.name)}</a><button type="button" data-i="${i}" aria-label="Remove ${esc(f.name)}">✕</button></li>`).join("");
+    document.querySelectorAll("#flist button").forEach(b=>b.onclick=()=>{files.splice(b.dataset.i,1);paintFiles()});
+  };
+  $("#f_attachments").onchange=e=>{
+    [...e.target.files].forEach(f=>{
+      if(f.size>1.5e6)return toast(`${f.name} is over 1.5 MB and wasn't added.`,1);
+      const r=new FileReader();r.onload=()=>{files.push({name:f.name,data:r.result});paintFiles()};r.readAsDataURL(f);
+    });e.target.value="";
+  };
+  const addInv=()=>{
+    const a=parseFloat($("#amt").value),n=free();
+    if(!n||!(a>0))return toast("Enter an amount greater than 0.",1);
+    inv[n]=a;$("#amt").value="";paintInv();$("#amt").focus();
+  };
+  $("#addinv").onclick=addInv;
+  $("#amt").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();addInv()}};
+  $("#tog").onclick=()=>{panel=!panel;$("#panel").hidden=!panel};
+  $("#back").onclick=()=>location.hash="#/";
+  if(!isNew)$("#del").onclick=()=>{if(confirm("Delete this claim?")){db.claims=db.claims.filter(c=>c.id!==claim.id);persist();toast("Deleted");location.hash="#/"}};
+  $("#frm").onsubmit=e=>e.preventDefault();
+  $("#save").onclick=()=>{
+    const title=$("#f_title").value.trim();
+    $("#e_title").textContent=title?"":"Claim Name is required.";
+    if(!title){$("#f_title").focus();return}
+    const rec=isNew?{id:db.next,createdBy:userName()}:{...claim};
+    F.forEach(f=>{
+      if(f.t==="files"||f.t==="ro")return;
+      const v=$("#f_"+f.k).value;
+      rec[f.k]=f.t==="num"?(v===""?"":+v):v.trim();
+    });
+    rec.title=title;rec.invoices={...inv};rec.totalAmount=total(inv);rec.attachments=files;
+    const prev=JSON.stringify(db);
+    if(isNew){db.claims.push(rec);db.next++}else db.claims=db.claims.map(c=>c.id===rec.id?rec:c);
+    if(!persist()){db=JSON.parse(prev);return}
+    toast("Saved!");location.hash="#/";
+  };
+  paintInv();paintFiles();
+  if(isNew)$("#f_title").focus();
+}
+
+route();
+</script>
+</body>
+</html>
